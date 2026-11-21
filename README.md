@@ -6,17 +6,19 @@ Built for the Agents Open for Business hackathon (Loops House, Celo), Altana Age
 
 ## The job it does
 
-Before a KOL takes a paid post, or a community strategist pitches a project, they need to know if the buzz is real. Vex reads who is posting about the project on X and how its token moves on Celo, then scores it with fixed rules.
+A KOL or community strategist puts their name behind projects. If a project's buzz turns out to be bots and farmed wallets, their reputation takes the hit. Vex watches the projects they promote or are about to take deals from, re-checks them every day, and messages them on Telegram when something changes.
 
-The person paying never gives the agent their keys. They open a **tab**: an Altana session on their own wallet that lets the agent move USDC only, up to a daily cap, until an expiry date. Altana enforces all three onchain. The user can close the tab at any time.
+Vex pays for its own checks, so it needs money it can spend while the user is away. It never gets their keys. The user opens a **tab**: an Altana session on their own wallet that lets Vex move USDC only, up to a daily cap, until an expiry date. Altana enforces all three onchain. The user can close the tab or withdraw at any time.
 
-## How a check works
+## How it works
 
 1. The user creates an Altana wallet with a passkey (Face ID or Touch ID) and funds it with USDC on Celo.
-2. They open a tab for Vex: for example 1 USDC a day for 7 days, `USDC.transfer` only.
-3. For each check, the agent charges the check price from the tab in one tagged USDC transfer. If that charge breaks the cap, the allowlist or the expiry, Altana reverts it and the check never runs.
-4. The agent buys the data it needs through [buy](https://usebuy.ai): X post search and a Chainstack Celo RPC read. Every payment is listed on the report with its Celo transaction.
-5. If no data comes back at all, the charge is refunded in a tagged transfer.
+2. They open a tab for Vex: for example 1 USDC a day for 7 days, `USDC.transfer` only. The site registers it and gives that browser an owner token, so knowing a wallet address is not enough to spend from its tab.
+3. They add projects to their watchlist (an X handle, a Celo token, or both). The first check runs straight away and becomes the baseline.
+4. Every day Vercel Cron calls `/api/cron`. For each watch that is due, Vex charges the check price from that user's tab in one tagged USDC transfer. If the charge breaks the cap, the allowlist or the expiry, Altana reverts it and the watch pauses.
+5. Vex buys the data through [buy](https://usebuy.ai): X post search and a Chainstack Celo RPC read. Every payment is listed with its Celo transaction.
+6. If a verdict flips or a score moves 15 points or more, Vex sends a Telegram alert with the reasons.
+7. Every charged check appears on [/proof](https://vex-black.vercel.app/proof) with its transaction, marked as run on schedule or by the user.
 
 ## Two payment modes
 
@@ -36,7 +38,8 @@ Going live on Celo mainnet:
 
 1. Create the GitHub repo, then enroll on Loops House. Put the code you get in `ATTRIBUTION_CODE` **before any transaction**.
 2. Send about 1 USDC on Celo to the agent wallet that `npm run keys` printed. It pays the services and its own gas in USDC.
-3. Deploy (Vercel), set the same env vars there with `MOCK=0`, and set `PUBLIC_URL`.
+3. In Vercel: connect Upstash Redis (Storage), set the env vars from `.env.example` with `MOCK=0`, and set `PUBLIC_URL`.
+3b. Telegram: make a bot with @BotFather, set the three `TELEGRAM_*` vars, then run `npm run telegram` once.
 4. `npm run register` mints the ERC-8004 identity. Set `AGENT_ID` to the id it prints and redeploy.
 5. Add the agent wallet to your hackathon entry.
 

@@ -57,7 +57,40 @@ export type ChainSignals = {
   backAndForthShare: number;
 };
 
-export type Verdict = "looks real" | "mixed" | "looks farmed" | "not enough data";
+/** A project Vex keeps an eye on for one tab. */
+export type Watch = {
+  id: string;
+  handle?: string;
+  contract?: string;
+  addedAt: string;
+  lastCheckedAt?: string;
+  last?: { score: number; verdict: Verdict; reasons: string[] };
+  /** Set when automatic checks stopped, with the reason in plain words */
+  paused?: string;
+};
+
+export type LogEntry = {
+  at: string;
+  kind: "check" | "alert" | "paused" | "refund";
+  subject: string;
+  score?: number;
+  verdict?: Verdict;
+  amount?: string;
+  tx?: string;
+  /** true when Vex ran it on its own schedule */
+  auto: boolean;
+  note?: string;
+};
+
+export type TabState = {
+  wallet: string;
+  session: import("@altananetwork/sdk").SerializedSession;
+  watches: Watch[];
+  log: LogEntry[];
+  telegram: { linked: boolean; link?: string };
+};
+
+export type Verdict ="looks real" | "mixed" | "looks farmed" | "not enough data";
 
 export type Report = {
   subject: string;
