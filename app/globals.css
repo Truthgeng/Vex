@@ -1,0 +1,19 @@
+/* Plain working styles. The real design pass comes later. */
+:root { color-scheme: dark; --bg: #0d0f12; --fg: #e8e6e1; --dim: #8a8f98; --line: #23272e; --accent: #d9f26b; --bad: #ff7a6b; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif; }
+main { max-width: 680px; margin: 0 auto; padding: 48px 20px 96px; }
+h1 { font-size: 40px; margin: 0 0 4px; letter-spacing: -0.02em; }
+h2 { font-size: 18px; margin: 0 0 12px; }
+h3 { font-size: 15px; color: var(--dim); margin: 20px 0 6px; }
+section { border-top: 1px solid var(--line); padding: 24px 0; }
+label { display: block; margin: 0 0 12px; color: var(--dim); font-size: 14px; }
+input { display: block; width: 100%; margin-top: 4px; padding: 10px 12px; background: #15181d; color: var(--fg); border: 1px solid var(--line); border-radius: 8px; font: inherit; }
+button { padding: 10px 16px; border-radius: 8px; border: 0; background: var(--accent); color: #111; font: inherit; font-weight: 600; cursor: pointer; }
+button.quiet { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+button:disabled { opacity: 0.4; cursor: default; }
+code { font-size: 13px; word-break: break-all; }
+a { color: var(--accent); }
+.hint, .note { color: var(--dim); font-size: 14px; }
+.error { color: var(--bad); }
+.report ul { padding-left: 18px; }
