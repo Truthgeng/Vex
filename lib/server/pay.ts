@@ -50,12 +50,13 @@ export function agentPayer(receipts: PaidCall[]): Payer {
  * Direct mode (experimental, PAY_MODE=direct). The agent pays each service
  * straight from the user's Altana wallet with an ERC-1271 x402 signature.
  *
- * Caveat, and why this is not the default: a signed payment is checked by the
- * USDC contract through isValidSignature, which looks at the checker approval
- * only. The session's onchain spend cap governs executed calls, so it may not
- * bound these signatures. Until Altana confirms otherwise, the per-call
- * maximum below is the only limit, and it is enforced in this code, not
- * onchain.
+ * Why this is not the default: since SDK 1.2.0, fetchWithX402 checks the
+ * session's spend cap before it signs, but that check lives in the SDK, not
+ * in the account. Signed payments never reach the account, so the chain does
+ * not count them, and the SDK keeps their tally in memory, which starts at
+ * zero in every new process. On Vercel that can be every request. A charge
+ * through execute (tab mode) is the only spend the chain itself caps. The
+ * per-call maximum below is an extra guard on top.
  */
 export function directPayer(session: Session, receipts: PaidCall[]): Payer {
   return async (service, path, body, maxUsd) => {

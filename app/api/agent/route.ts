@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { CELO_USDC, showUsdc } from "@/lib/config";
 import { agentAccount, sessionSigner } from "@/lib/server/agent";
 import { checkPrice, isMock, payMode } from "@/lib/server/scout";
+import { appCodes } from "@/lib/server/attribution";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ export async function GET() {
       checkPrice: showUsdc(checkPrice()),
       token: CELO_USDC,
       payMode: payMode(),
+      appCodes: appCodes(),
       mock: true,
     });
   }
@@ -29,6 +31,7 @@ export async function GET() {
       checkPrice: showUsdc(checkPrice()),
       token: CELO_USDC,
       payMode: payMode(),
+      appCodes: appCodes(),
       mock: isMock(),
     });
   } catch (e) {

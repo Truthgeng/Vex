@@ -13,6 +13,7 @@ type AgentInfo = {
   checkPrice: string;
   payMode: "tab" | "direct";
   mock: boolean;
+  appCodes?: string[];
   error?: string;
 };
 
@@ -34,8 +35,9 @@ const vColor = (v?: Verdict) => (v === "looks real" ? "var(--real)" : v === "mix
 const txLink = (h?: string) => (h ? <a className="tx" href={`https://celoscan.io/tx/${h}`} target="_blank" rel="noreferrer">{h.slice(0, 8)}…</a> : null);
 
 export default function VexApp() {
-  const client = useMemo(() => createClient({ chains: [CELO], agentIdentity: false }), []);
   const [agent, setAgent] = useState<AgentInfo | null>(null);
+  // The user's own transactions (open tab, withdraw, close) carry Vex's attribution tag too
+  const client = useMemo(() => createClient({ chains: [CELO], agentIdentity: false, appCode: agent?.appCodes ?? ["vex"] }), [agent]);
   const [wallet, setWallet] = useState<string | null>(null);
   const [signer, setSigner] = useState<Signer | null>(null);
   const [demo, setDemo] = useState(false);
@@ -111,8 +113,10 @@ export default function VexApp() {
   const live = !!tab && tab.session.expiry * 1000 > Date.now();
   const cap = tab?.session.permissions.spend?.[0];
   const capUnits = cap ? BigInt(cap.limit) : 0n;
+  // Altana's daily cap resets at 00:00 UTC, so count from there, not a rolling 24h
+  const dayStart = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate());
   const spentUnits = (tab?.log ?? [])
-    .filter((l) => l.kind === "check" && l.amount && Date.now() - Date.parse(l.at) < 86_400_000)
+    .filter((l) => l.kind === "check" && l.amount && Date.parse(l.at) >= dayStart)
     .reduce((a, l) => a + BigInt(l.amount!), 0n);
 
   // ---------- actions ----------

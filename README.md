@@ -23,7 +23,7 @@ Vex pays for its own checks, so it needs money it can spend while the user is aw
 ## Two payment modes
 
 - **tab (default):** one capped charge per check from the user's wallet, then the agent pays the services from its own wallet. The cap is enforced onchain on every charge.
-- **direct (`PAY_MODE=direct`, experimental):** the agent pays each service straight from the user's wallet with an ERC-1271 x402 signature (`fetchWithX402`). This needs one more setup call (USDC approved as signature checker). We have not confirmed that the session's spend cap applies to signed payments, since the cap governs executed calls, so in this mode the code checks the price before signing and refuses anything over the per-call maximum. Ask Altana before turning it on for anyone else.
+- **direct (`PAY_MODE=direct`, experimental):** the agent pays each service straight from the user's wallet with an ERC-1271 x402 signature (`fetchWithX402`). This needs one more setup call (USDC approved as signature checker). Since Altana SDK 1.2.0 the SDK checks the session's cap before signing, but that check runs in the SDK, not onchain, and its count of signed payments lives in memory. On serverless hosting it starts from zero on each new process, so tab mode stays the default: its charges go through `execute`, where the chain enforces the cap.
 
 ## Setup
 
@@ -62,8 +62,10 @@ npm run cli -- close-tab
 | A check charged from a tab | to fill in |
 | Paid data calls | listed on every report |
 
-## Open questions for Altana
+## Attribution
 
-- Does `execute` with a session keep our ERC-8021 suffix in the final transaction so it is credited?
-- Does the session's spend cap bound ERC-1271 x402 signatures, or only executed calls?
-- Does `fetchWithX402` work with Celo's facilitator and the buy gateway for Celo USDC?
+Altana SDK 1.2.0 tags every transaction it sends with ERC-8021. Vex passes `appCode: ["vex", ATTRIBUTION_CODE]`, so tab charges, tab opens, closes and withdrawals all end with `altana,vex,<hackathon code>`. The agent's own wallet (refunds, ERC-8004 registration) tags with `@celo/attribution-tags`.
+
+## Still to confirm on mainnet
+
+- `fetchWithX402` with Celo's facilitator and the buy gateway for Celo USDC (only matters for direct mode).

@@ -16,3 +16,13 @@ export function attributionCode(): string {
 export function tag(data: Hex): Hex {
   return concat([data, toDataSuffix(attributionCode())]);
 }
+
+/**
+ * Codes for Altana's appCode (SDK 1.2.0+): every transaction an Altana client
+ * sends, session charges included, ends with "altana,vex,<your code>". The
+ * hackathon code is optional here so demo mode still works without it.
+ */
+export function appCodes(): string[] {
+  const code = process.env.ATTRIBUTION_CODE?.trim();
+  return code ? ["vex", code] : ["vex"];
+}

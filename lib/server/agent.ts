@@ -3,7 +3,7 @@ import { createPublicClient, createWalletClient, http, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { celo } from "viem/chains";
 import { withAttribution } from "@celo/attribution-tags";
-import { attributionCode } from "./attribution";
+import { attributionCode, appCodes } from "./attribution";
 
 /**
  * The agent has two keys, kept apart on purpose:
@@ -24,8 +24,12 @@ function key(name: string): Hex {
 export const agentAccount = () => privateKeyToAccount(key("AGENT_PRIVATE_KEY"));
 export const sessionSigner = () => signerFromPrivateKey(key("AGENT_SESSION_KEY"));
 
-/** Altana client for Celo. Users are people, not agents, so no ERC-8004 identity is minted for their wallets. */
-export const altana = () => createClient({ chains: [CELO], agentIdentity: false });
+/**
+ * Altana client for Celo. Users are people, not agents, so no ERC-8004
+ * identity is minted for their wallets. Altana appends the ERC-8021 tag to
+ * every transaction itself, so calls are never tagged by hand here.
+ */
+export const altana = () => createClient({ chains: [CELO], agentIdentity: false, appCode: appCodes() });
 
 export const publicClient = () => createPublicClient({ chain: celo, transport: http(process.env.CELO_RPC_URL) });
 

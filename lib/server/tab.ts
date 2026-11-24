@@ -2,12 +2,11 @@ import type { Session } from "@altananetwork/sdk";
 import { encodeFunctionData, erc20Abi, type Address, type Hex } from "viem";
 import { CELO_USDC, CELO_CHAIN_ID, USDC_FEE_CURRENCY } from "@/lib/config";
 import type { TabCharge } from "@/lib/types";
-import { tag } from "./attribution";
 import { altana, agentAccount, agentWalletClient, publicClient, TabError } from "./agent";
 
 /**
- * Takes the price of one check from the user's Altana wallet, as a tagged
- * USDC transfer to the agent.
+ * Takes the price of one check from the user's Altana wallet, as a USDC
+ * transfer to the agent (tagged by Altana).
  *
  * This is the step Altana enforces onchain: the session key can only call
  * USDC.transfer, only up to the user's daily cap, only until the expiry. A
@@ -15,9 +14,8 @@ import { altana, agentAccount, agentWalletClient, publicClient, TabError } from 
  * even if its own code is wrong.
  */
 export async function chargeTab(session: Session, amount: bigint): Promise<TabCharge> {
-  const data = tag(
-    encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [agentAccount().address, amount] }),
-  );
+  // Altana adds the attribution tag (appCode), so the calldata stays plain
+  const data = encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [agentAccount().address, amount] });
   const res = await altana().execute({
     session,
     calls: [{ to: CELO_USDC, data, value: 0n }],
