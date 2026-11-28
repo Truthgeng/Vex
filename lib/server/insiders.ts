@@ -18,7 +18,7 @@ const EXPLORER: Record<Chain, string> = {
  * for their customers. Moving them would set off false insider alerts, so a
  * wallet the explorer labels as an exchange is grouped with the contracts.
  */
-const EXCHANGE = /binance|okx|bybit|coinbase|kraken|bitget|kucoin|gate\.io|htx|huobi|bithumb|btcturk|gemini|mexc|upbit|bitfinex|crypto\.com|exchange|hot wallet|cold wallet|deposit/i;
+const EXCHANGE = /binance|okx|bybit|coinbase|kraken|bitget|kucoin|gate\.io|htx|huobi|bithumb|btcturk|gemini|mexc|upbit|bitfinex|robinhood|revolut|crypto\.com|exchange|hot wallet|cold wallet|deposit/i;
 
 const BURN = new Set(["0x0000000000000000000000000000000000000000", "0x000000000000000000000000000000000000dead"]);
 const TOP = 10;
