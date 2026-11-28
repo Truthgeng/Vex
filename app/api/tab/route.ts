@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { accountHasKey, keyHashForSessionOrKey, type SerializedSession } from "@altananetwork/sdk";
 import type { PublicClient } from "viem";
 import { sessionSigner, publicClient } from "@/lib/server/agent";
-import { isMock } from "@/lib/server/scout";
+import { DEMO_KEY } from "@/lib/server/scout";
 import { getTab, hash, newToken, publicState, removeTab, saveTab, setLinkCode, type TabRecord } from "@/lib/server/store";
 import { botUsername } from "@/lib/server/telegram";
 import { caught, fail, tabFrom } from "@/lib/server/http";
@@ -24,9 +24,10 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as { session?: SerializedSession; demoWallet?: string; ownerToken?: string };
-    const demo = isMock() && !body.session && body.demoWallet;
+    // A demo tab works in any mode: sample data only, nothing can be charged to it
+    const demo = !body.session && !!body.demoWallet && /^0x[0-9a-fA-F]{40}$/.test(body.demoWallet);
     const session: SerializedSession | undefined = demo
-      ? { walletAddress: body.demoWallet as `0x${string}`, publicKey: "0x04", permissions: { calls: [], spend: [{ limit: "1000000", period: "day" }] }, expiry: Math.floor(Date.now() / 1000) + 7 * 86_400 }
+      ? { walletAddress: body.demoWallet as `0x${string}`, publicKey: DEMO_KEY, permissions: { calls: [], spend: [{ limit: "1000000", period: "day" }] }, expiry: Math.floor(Date.now() / 1000) + 7 * 86_400 }
       : body.session;
     if (!session?.walletAddress) return fail("Open a tab first.");
     const wallet = session.walletAddress.toLowerCase();

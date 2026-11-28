@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import type { Allowance, CheckInput, Depth, InsiderSnapshot, LogEntry, Report, SocialSignals, Watch } from "@/lib/types";
 import { showUsdc } from "@/lib/config";
 import { TabError, openTab } from "./agent";
-import { checkPrice, isMock, runCheck } from "./scout";
+import { checkPrice, isDemo, isMock, runCheck } from "./scout";
 import { readAllowance } from "./allowance";
 import { addProof, saveTab, type TabRecord } from "./store";
 import { esc, sendTelegram } from "./telegram";
@@ -45,7 +45,7 @@ export function scanTriggers(base: SocialSignals | null | undefined, now: Social
 
 /** The tab's room for today: from the chain when live, from Vex's log in demo mode. */
 async function roomToday(tab: TabRecord): Promise<Allowance> {
-  if (!isMock()) return readAllowance(openTab(tab.session));
+  if (!isMock() && !isDemo(tab.session)) return readAllowance(openTab(tab.session));
   const limit = BigInt(tab.session.permissions.spend?.[0]?.limit ?? "0");
   const now = new Date();
   const start = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());

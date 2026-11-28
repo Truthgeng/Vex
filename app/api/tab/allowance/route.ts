@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { openTab } from "@/lib/server/agent";
 import { readAllowance } from "@/lib/server/allowance";
-import { isMock } from "@/lib/server/scout";
+import { isDemo, isMock } from "@/lib/server/scout";
 import { caught, fail, tabFrom } from "@/lib/server/http";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   const tab = await tabFrom(req);
   if (!tab) return fail("No tab here.", 404);
-  if (isMock()) return NextResponse.json({ source: "demo" });
+  if (isMock() || isDemo(tab.session)) return NextResponse.json({ source: "demo" });
   try {
     return NextResponse.json(await readAllowance(openTab(tab.session)));
   } catch (e) {

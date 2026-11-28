@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { allWallets, getTab } from "@/lib/server/store";
 import { isDue, runWatch } from "@/lib/server/watcher";
-import { isMock } from "@/lib/server/scout";
+import { isDemo, isMock } from "@/lib/server/scout";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -23,7 +23,8 @@ export async function GET(req: Request) {
   const done = { tabs: 0, checks: 0, failed: 0, skipped: 0 };
   for (const wallet of await allWallets()) {
     const tab = await getTab(wallet);
-    if (!tab) continue;
+    // Demo tabs are for trying Vex out: the daily run never spends on them
+    if (!tab || isDemo(tab.session)) continue;
     if (tab.session.expiry * 1000 <= Date.now()) {
       done.skipped += tab.watches.length;
       continue;

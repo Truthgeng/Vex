@@ -12,6 +12,9 @@ import { judge } from "./verdict";
 import { mockReport } from "./mock";
 
 export const isMock = () => process.env.MOCK !== "0";
+/** Demo tabs are made by "Try the demo": sample data, never charged, in any mode. */
+export const DEMO_KEY = "0x04";
+export const isDemo = (s?: { publicKey: string } | null) => !!s && s.publicKey === DEMO_KEY;
 export const payMode = (): "tab" | "direct" => (process.env.PAY_MODE === "direct" ? "direct" : "tab");
 /** A deep check: two X searches plus a day of onchain transfers. */
 export const checkPrice = () => usdc(process.env.CHECK_PRICE || "0.05");
@@ -34,7 +37,7 @@ export async function runCheck(
   if (!subject) throw new TabError("Give an X handle, a Celo token contract, or both.");
   // A scan only reads X. A watch with no handle has nothing to scan, so it goes deep
   if (depth === "scan" && !input.handle) depth = "deep";
-  if (isMock()) return mockReport(subject, stored?.walletAddress, depth, input, previousInsiders);
+  if (isMock() || isDemo(stored)) return mockReport(subject, stored?.walletAddress, depth, input, previousInsiders);
   if (!stored) throw new TabError("Open a tab first.");
 
   const session = openTab(stored);

@@ -255,7 +255,7 @@ export default function VexApp() {
             <div className="row">
               <button className="btn btn-primary btn-sm" onClick={createWallet} disabled={!!busy || agent?.mock}>Create wallet</button>
               <button className="btn btn-ghost btn-sm" onClick={unlock} disabled={!!busy || agent?.mock}>I have one</button>
-              {agent?.mock && <button className="btn btn-ghost btn-sm" onClick={tryDemo} disabled={!!busy}>Try the demo</button>}
+              <button className="btn btn-ghost btn-sm" onClick={tryDemo} disabled={!!busy}>Try the demo</button>
             </div>
           ) : (
             <>

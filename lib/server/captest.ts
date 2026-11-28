@@ -3,7 +3,7 @@ import { CELO_USDC, CELO_CHAIN_ID } from "@/lib/config";
 import type { CapTest } from "@/lib/types";
 import { altana, agentAccount, openTab } from "./agent";
 import { readAllowance } from "./allowance";
-import { isMock } from "./scout";
+import { isDemo, isMock } from "./scout";
 import { refundTab } from "./tab";
 import { addCapTest, type TabRecord } from "./store";
 
@@ -18,7 +18,7 @@ const OVER_BY = 10_000n; // 0.01 USDC past what the cap has left
  * straight back and the result says so plainly.
  */
 export async function runCapTest(tab: TabRecord): Promise<CapTest> {
-  if (isMock()) {
+  if (isMock() || isDemo(tab.session)) {
     const limit = tab.session.permissions.spend?.[0]?.limit ?? "1000000";
     const result: CapTest = {
       at: new Date().toISOString(),
