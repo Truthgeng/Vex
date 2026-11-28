@@ -98,6 +98,35 @@ export async function proofs(): Promise<ProofEntry[]> {
   return (mem.get(PROOF) as ProofEntry[]) ?? [];
 }
 
+/**
+ * Which accounts posted about which watched projects, across every tab. This
+ * is how Vex spots serial promoters. Only public X handles and project names
+ * are kept, 30 entries per account.
+ */
+type Mention = { subject: string; at: string };
+const PROMO = "promoters";
+export async function recallPromoters(authors: string[]): Promise<Map<string, Mention[]>> {
+  const out = new Map<string, Mention[]>();
+  if (!authors.length) return out;
+  if (redis) {
+    const rows = await redis.hmget<Record<string, Mention[]>>(PROMO, ...authors);
+    for (const a of authors) if (rows?.[a]) out.set(a, rows[a]);
+  } else {
+    const all = (mem.get(PROMO) as Record<string, Mention[]>) ?? {};
+    for (const a of authors) if (all[a]) out.set(a, all[a]);
+  }
+  return out;
+}
+export async function rememberPromoters(subject: string, authors: string[]) {
+  if (!authors.length) return;
+  const now = new Date().toISOString();
+  const before = await recallPromoters(authors);
+  const next: Record<string, Mention[]> = {};
+  for (const a of authors) next[a] = [{ subject, at: now }, ...(before.get(a) ?? []).filter((m) => m.subject !== subject)].slice(0, 30);
+  if (redis) await redis.hset(PROMO, next);
+  else mem.set(PROMO, { ...((mem.get(PROMO) as Record<string, Mention[]>) ?? {}), ...next });
+}
+
 /** Every cap test, refused or not, newest first. Public on the proof page. */
 const CAPS = "captests";
 export async function addCapTest(c: CapTest) {

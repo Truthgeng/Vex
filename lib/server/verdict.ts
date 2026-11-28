@@ -1,10 +1,14 @@
-import type { ChainSignals, SocialSignals, Verdict } from "@/lib/types";
+import type { ChainSignals, InsiderSignals, SocialSignals, Verdict } from "@/lib/types";
 
 /**
  * Fixed rules, so the same project always gets the same score. Starts at 100
  * and takes points off for each farming sign. Each rule says why in plain words.
  */
-export function judge(social: SocialSignals | null | undefined, chain: ChainSignals | null | undefined) {
+export function judge(
+  social: SocialSignals | null | undefined,
+  chain: ChainSignals | null | undefined,
+  extra: { insiders?: InsiderSignals | null; serial?: number } = {},
+) {
   const reasons: string[] = [];
   let score = 100;
   let evidence = 0;
@@ -32,6 +36,20 @@ export function judge(social: SocialSignals | null | undefined, chain: ChainSign
     if (chain.wallets >= 100) reasons.push(`${chain.wallets} wallets moved the token in ${chain.hours}h.`);
   } else if (chain) {
     reasons.push(`Only ${chain.transfers} transfers in ${chain.hours}h, too few to judge.`);
+  }
+
+  if (social && social.posts >= 5 && (extra.serial ?? 0) >= 0.3) {
+    hit(15, `${pct(extra.serial!)} of posts come from accounts that pushed 3 or more other watched projects this month.`);
+  }
+
+  const ins = extra.insiders;
+  if (ins) {
+    evidence++;
+    // Selling by insiders is the strongest single sign, so it costs the most
+    if (ins.sold) hit(30, ins.moves.filter((m) => m.includes("cut")).join(" "));
+    if (ins.snapshot.topTenShare > 0.5) hit(10, `The 10 biggest wallets hold ${pct(ins.snapshot.topTenShare)} of supply (pools and lockers left out).`);
+    else reasons.push(`The 10 biggest wallets hold ${pct(ins.snapshot.topTenShare)} of supply, pools and lockers left out.`);
+    for (const m of ins.moves.filter((m) => !m.includes("cut"))) reasons.push(m);
   }
 
   score = Math.max(0, score);

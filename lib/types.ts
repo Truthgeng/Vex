@@ -1,9 +1,43 @@
+export type Chain = "celo" | "ethereum" | "base";
+
 export type CheckInput = {
   /** X handle without the @ */
   handle?: string;
-  /** Token contract on Celo */
+  /** Token contract */
   contract?: `0x${string}`;
+  /** Chain the token lives on. Transfer analysis is Celo only; holder tracking covers all three */
+  chain?: Chain;
 };
+
+/** One account posting about a project, with what makes it worth a look. */
+export type Pusher = {
+  author: string;
+  posts: number;
+  followers?: number;
+  ageDays?: number;
+  avgLikes?: number;
+  /** Other watched projects this account posted about in the last 30 days */
+  alsoPushed: string[];
+  flags: string[];
+};
+
+export type Holder = { address: string; share: number; isContract: boolean; label?: string };
+
+export type InsiderSnapshot = {
+  chain: Chain;
+  contract: string;
+  symbol: string;
+  holdersCount: number;
+  deployer?: Holder;
+  /** The 10 biggest wallets that are not contracts */
+  top: Holder[];
+  /** The biggest contract holders: pools, lockers, bridges */
+  contracts: Holder[];
+  topTenShare: number;
+  at: string;
+};
+
+export type InsiderSignals = { snapshot: InsiderSnapshot; moves: string[]; sold: boolean };
 
 /** One payment the agent made for data, with the Celo transaction that proves it. */
 export type PaidCall = {
@@ -64,6 +98,11 @@ export type Watch = {
   id: string;
   handle?: string;
   contract?: string;
+  chain?: Chain;
+  /** Holder snapshot from the last run: what the next one is compared to */
+  insiders?: InsiderSnapshot | null;
+  /** The full last deep report, for the detail view */
+  lastReport?: Report;
   addedAt: string;
   lastCheckedAt?: string;
   /** Result of the last deep check, the one the verdict comes from */
@@ -110,6 +149,8 @@ export type Report = {
   reasons: string[];
   social?: SocialSignals | null;
   chain?: ChainSignals | null;
+  pushers?: Pusher[];
+  insiders?: InsiderSignals | null;
   charge?: TabCharge;
   paidCalls: PaidCall[];
   mode: "mock" | "tab" | "direct";

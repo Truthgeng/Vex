@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient, CELO, serializeSession, type Signer } from "@altananetwork/sdk";
 import { encodeFunctionData, erc20Abi, isAddress } from "viem";
 import { CELO_USDC, CELO_CHAIN_ID, TAB_CALLS, usdc, showUsdc } from "@/lib/config";
-import type { Allowance, CapTest, LogEntry, Report, TabState, Verdict, Watch } from "@/lib/types";
+import type { Allowance, CapTest, Chain, InsiderSignals, LogEntry, Pusher, Report, TabState, Verdict, Watch } from "@/lib/types";
 
 type AgentInfo = {
   sessionPublicKey: `0x${string}`;
@@ -50,8 +50,8 @@ export default function VexApp() {
   const [report, setReport] = useState<Report | null>(null);
   const [daily, setDaily] = useState("1");
   const [days, setDays] = useState("7");
-  const [watchIn, setWatchIn] = useState({ handle: "", contract: "" });
-  const [checkIn, setCheckIn] = useState({ handle: "", contract: "" });
+  const [watchIn, setWatchIn] = useState({ handle: "", contract: "", chain: "celo" as Chain });
+  const [checkIn, setCheckIn] = useState({ handle: "", contract: "", chain: "celo" as Chain });
   const [wd, setWd] = useState<{ open: boolean; to: string; amount: string }>({ open: false, to: "", amount: "" });
   const [open, setOpen] = useState<string | null>(null);
   const [room, setRoom] = useState<Allowance | null>(null);
@@ -211,7 +211,7 @@ export default function VexApp() {
   const addWatch = () =>
     run("Adding and running the first check", async () => {
       const body = await api("/api/watch", { method: "POST", body: JSON.stringify(watchIn) });
-      setTab(body.tab); setWatchIn({ handle: "", contract: "" });
+      setTab(body.tab); setWatchIn({ handle: "", contract: "", chain: watchIn.chain });
     }, "Watching");
 
   const runWatchNow = (w: Watch, mode: "decide" | "deep") =>
@@ -352,7 +352,8 @@ export default function VexApp() {
           <p className="lede">Every day Vex scans each one for under a cent, and only buys a deep check when something moved.</p>
           <div className="row" style={{ marginBottom: 14 }}>
             <label className="field"><span>X handle</span><input className="input" value={watchIn.handle} onChange={(e) => setWatchIn({ ...watchIn, handle: e.target.value })} placeholder="@project" /></label>
-            <label className="field"><span>Celo token (optional)</span><input className="input mono" value={watchIn.contract} onChange={(e) => setWatchIn({ ...watchIn, contract: e.target.value })} placeholder="0x…" /></label>
+            <label className="field"><span>Token contract (optional)</span><input className="input mono" value={watchIn.contract} onChange={(e) => setWatchIn({ ...watchIn, contract: e.target.value })} placeholder="0x…" /></label>
+            <ChainPick value={watchIn.chain} onChange={(chain) => setWatchIn({ ...watchIn, chain })} />
             <button className="btn btn-primary btn-sm" style={{ alignSelf: "end" }} onClick={addWatch} disabled={!!busy || !live || (!watchIn.handle && !watchIn.contract)}>Watch</button>
           </div>
           {!tab?.watches.length ? (
@@ -376,7 +377,11 @@ export default function VexApp() {
                   <button className="btn btn-ghost btn-sm" onClick={() => runWatchNow(w, "deep")} disabled={!!busy}>Deep check</button>
                   <button className="btn btn-ghost btn-sm" onClick={() => removeWatch(w)} disabled={!!busy} aria-label="Stop watching">✕</button>
                 </div>
-                {open === w.id && w.last && <ul className="why reasons">{w.last.reasons.map((r) => <li key={r}>{r}</li>)}</ul>}
+                {open === w.id && w.last && (
+                  <div className="why">
+                    {w.lastReport ? <ReportBody r={w.lastReport} /> : <ul className="reasons">{w.last.reasons.map((r) => <li key={r}>{r}</li>)}</ul>}
+                  </div>
+                )}
               </div>
             ))
           )}
@@ -397,7 +402,8 @@ export default function VexApp() {
           <p className="lede">One look at a project without adding it to your watchlist.</p>
           <div className="row">
             <label className="field"><span>X handle</span><input className="input" value={checkIn.handle} onChange={(e) => setCheckIn({ ...checkIn, handle: e.target.value })} placeholder="@project" /></label>
-            <label className="field"><span>Celo token (optional)</span><input className="input mono" value={checkIn.contract} onChange={(e) => setCheckIn({ ...checkIn, contract: e.target.value })} placeholder="0x…" /></label>
+            <label className="field"><span>Token contract (optional)</span><input className="input mono" value={checkIn.contract} onChange={(e) => setCheckIn({ ...checkIn, contract: e.target.value })} placeholder="0x…" /></label>
+            <ChainPick value={checkIn.chain} onChange={(chain) => setCheckIn({ ...checkIn, chain })} />
             <button className="btn btn-primary btn-sm" style={{ alignSelf: "end" }} onClick={quickCheck} disabled={!!busy || (!agent?.mock && !live) || (!checkIn.handle && !checkIn.contract)}>Check</button>
           </div>
           {report && <ReportView r={report} />}
@@ -467,12 +473,89 @@ function ReportView({ r }: { r: Report }) {
           <span className={`verdict ${vClass(r.verdict)}`}>{r.verdict}</span> {r.mode === "mock" && <span className="sample">sample</span>}
         </div>
       </div>
-      <ul className="reasons">{r.reasons.map((x) => <li key={x}>{x}</li>)}</ul>
+      <ReportBody r={r} />
       <h3 style={{ marginTop: 18 }}>What Vex paid for</h3>
       <ul className="paid">
         {r.charge && <li><span>Check, from your tab</span><span>{showUsdc(r.charge.amount)} USDC {txLink(r.charge.txHash)}</span></li>}
         {r.paidCalls.map((c, i) => <li key={i}><span>{c.service}</span><span>{showUsdc(c.amount)} USDC {txLink(c.txHash)}</span></li>)}
       </ul>
+    </div>
+  );
+}
+
+function ChainPick({ value, onChange }: { value: Chain; onChange: (c: Chain) => void }) {
+  return (
+    <label className="field chain-pick">
+      <span>Chain</span>
+      <select className="input" value={value} onChange={(e) => onChange(e.target.value as Chain)}>
+        <option value="celo">Celo</option>
+        <option value="ethereum">Ethereum</option>
+        <option value="base">Base</option>
+      </select>
+    </label>
+  );
+}
+
+/** The detail of a check: reasons, who is pushing it, and what the holders are doing. */
+function ReportBody({ r }: { r: Report }) {
+  return (
+    <>
+      <ul className="reasons">{r.reasons.map((x) => <li key={x}>{x}</li>)}</ul>
+      {r.insiders && <Holders i={r.insiders} />}
+      {r.pushers?.length ? <Pushers list={r.pushers} /> : null}
+    </>
+  );
+}
+
+const pct1 = (n: number) => `${Math.round(n * 1000) / 10}%`;
+
+function Holders({ i }: { i: InsiderSignals }) {
+  const s = i.snapshot;
+  const explorer = s.chain === "celo" ? "https://celoscan.io/address/" : s.chain === "base" ? "https://basescan.org/address/" : "https://etherscan.io/address/";
+  return (
+    <div className="detail">
+      <h4>Holders <span className="faint">· {s.symbol} on {s.chain}</span></h4>
+      {i.moves.length > 0 && (
+        <ul className={`moves ${i.sold ? "bad" : ""}`}>{i.moves.map((m) => <li key={m}>{m}</li>)}</ul>
+      )}
+      <div className="stats">
+        <div><b>{s.holdersCount.toLocaleString()}</b><span>holders</span></div>
+        <div><b>{pct1(s.topTenShare)}</b><span>held by top 10 wallets</span></div>
+        {s.deployer && <div><b>{pct1(s.deployer.share)}</b><span>held by the deployer</span></div>}
+      </div>
+      <table className="mini">
+        <tbody>
+          {s.deployer && <tr><td><a className="tx" href={explorer + s.deployer.address} target="_blank" rel="noreferrer">{s.deployer.address.slice(0, 8)}…</a></td><td>deployer</td><td>{pct1(s.deployer.share)}</td></tr>}
+          {s.top.slice(0, 5).map((h) => <tr key={h.address}><td><a className="tx" href={explorer + h.address} target="_blank" rel="noreferrer">{h.address.slice(0, 8)}…</a></td><td>wallet</td><td>{pct1(h.share)}</td></tr>)}
+          {s.contracts.slice(0, 2).map((h) => <tr key={h.address}><td><a className="tx" href={explorer + h.address} target="_blank" rel="noreferrer">{h.address.slice(0, 8)}…</a></td><td>{h.label ?? "contract"}</td><td>{pct1(h.share)}</td></tr>)}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function Pushers({ list }: { list: Pusher[] }) {
+  return (
+    <div className="detail">
+      <h4>Who&apos;s pushing it</h4>
+      <table className="mini">
+        <thead><tr><th>Account</th><th>Posts</th><th>Followers</th><th className="hide-sm">Age</th><th>Worth a look</th></tr></thead>
+        <tbody>
+          {list.slice(0, 8).map((p) => (
+            <tr key={p.author}>
+              <td><a href={`https://x.com/${p.author}`} target="_blank" rel="noreferrer">@{p.author}</a></td>
+              <td>{p.posts}</td>
+              <td>{p.followers !== undefined ? p.followers.toLocaleString() : "?"}</td>
+              <td className="hide-sm">{p.ageDays !== undefined ? `${p.ageDays}d` : "?"}</td>
+              <td className="flags">
+                {p.flags.length ? p.flags.map((f) => <span key={f} className="flag">{f}</span>) : <span className="faint">nothing odd</span>}
+                {p.alsoPushed.length >= 3 && <div className="faint" style={{ fontSize: 11.5, marginTop: 3 }}>also pushed {p.alsoPushed.join(", ")}</div>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="note" style={{ marginTop: 6 }}>Flags are signals, not proof. Real KOLs promote many projects too.</p>
     </div>
   );
 }

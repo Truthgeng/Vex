@@ -183,6 +183,24 @@ section[id] { scroll-margin-top: 84px; }
 .check path { stroke-dasharray: 24; stroke-dashoffset: 24; animation: draw 0.5s 0.05s ease-out forwards; }
 @keyframes draw { to { stroke-dashoffset: 0; } }
 
+/* Report detail: holders and pushers */
+.detail { margin-top: 18px; }
+.detail h4 { font: 600 14px var(--display); margin: 0 0 8px; }
+.stats { display: flex; gap: 22px; flex-wrap: wrap; margin: 6px 0 10px; }
+.stats b { display: block; font: 600 18px var(--display); }
+.stats span { font-size: 12px; color: var(--dim); }
+.mini { width: 100%; border-collapse: collapse; font-size: 13px; }
+.mini th { text-align: left; color: var(--faint); font-weight: 500; font-size: 11.5px; padding: 0 8px 6px 0; }
+.mini td { padding: 7px 8px 7px 0; border-top: 1px solid var(--line); vertical-align: top; }
+.mini a { text-decoration: none; }
+.flags { white-space: normal; }
+.flag { display: inline-block; font-size: 11.5px; color: var(--mixed); background: rgba(245, 196, 81, 0.08); border-radius: 6px; padding: 1px 7px; margin: 0 4px 3px 0; }
+.moves { margin: 0 0 8px; padding: 10px 12px 10px 28px; border-radius: 10px; background: rgba(255,255,255,0.04); font-size: 13.5px; }
+.moves.bad { background: rgba(255, 93, 93, 0.08); color: #ffb3ad; }
+.chain-pick { flex: 0 0 120px !important; min-width: 110px !important; }
+select.input { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--dim) 50%), linear-gradient(135deg, var(--dim) 50%, transparent 50%); background-position: calc(100% - 16px) 18px, calc(100% - 11px) 18px; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 28px; }
+@media (max-width: 520px) { .mini .hide-sm { display: none; } }
+
 /* Example alert in the Alerts card */
 .bubble { margin-top: 16px; padding: 12px 14px; border-radius: 14px 14px 14px 4px; background: rgba(0,0,0,0.35); border: 1px solid var(--line); font-size: 13px; line-height: 1.5; }
 .bubble b { font-weight: 600; }

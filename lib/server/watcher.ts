@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import type { Allowance, CheckInput, Depth, LogEntry, Report, SocialSignals, Watch } from "@/lib/types";
+import type { Allowance, CheckInput, Depth, InsiderSnapshot, LogEntry, Report, SocialSignals, Watch } from "@/lib/types";
 import { showUsdc } from "@/lib/config";
 import { TabError, openTab } from "./agent";
 import { checkPrice, isMock, runCheck } from "./scout";
@@ -17,13 +17,13 @@ export const subjectOf = (w: { handle?: string; contract?: string }) =>
   [w.handle && `@${w.handle}`, w.contract && `${w.contract.slice(0, 6)}…${w.contract.slice(-4)}`].filter(Boolean).join(" / ");
 
 export function newWatch(input: CheckInput): Watch {
-  return { id: randomBytes(6).toString("hex"), handle: input.handle, contract: input.contract, addedAt: new Date().toISOString() };
+  return { id: randomBytes(6).toString("hex"), handle: input.handle, contract: input.contract, chain: input.contract ? input.chain ?? "celo" : undefined, addedAt: new Date().toISOString() };
 }
 
 export const isDue = (w: Watch, now = Date.now()) => !w.lastCheckedAt || now - Date.parse(w.lastCheckedAt) >= DUE_AFTER_MS;
 
 const pct = (n: number) => `${Math.round(n * 100)}%`;
-const inputOf = (w: Watch): CheckInput => ({ handle: w.handle, contract: w.contract as `0x${string}` | undefined });
+const inputOf = (w: Watch): CheckInput => ({ handle: w.handle, contract: w.contract as `0x${string}` | undefined, chain: w.chain });
 
 /**
  * What a cheap scan saw that the last deep check didn't. Each line is a reason
@@ -79,8 +79,10 @@ export async function runWatch(tab: TabRecord, watch: Watch, auto: boolean): Pro
           : null;
   if (deepReason) return checkForTab(tab, inputOf(watch), { auto, watch, depth: "deep", decision: `Bought a deep check: ${deepReason}.` });
 
+  const before = watch.insiders;
   const scan = await checkForTab(tab, inputOf(watch), { auto, watch, depth: "scan", decision: "Daily scan." });
-  const triggers = scanTriggers(watch.baseline, scan.social);
+  // Insider selling outranks every X signal, and holder data is free, so it is read on every run
+  const triggers = [...(scan.insiders?.sold ? scan.insiders.moves.filter((m) => m.includes("cut")) : []), ...scanTriggers(watch.baseline, scan.social)];
   if (!triggers.length) {
     watch.lastDecision = "Scan matched the baseline, so no deep check was bought.";
     tab.log[0].note = watch.lastDecision;
@@ -97,14 +99,16 @@ export async function runWatch(tab: TabRecord, watch: Watch, auto: boolean): Pro
     tab.log.unshift({ at: new Date().toISOString(), kind: "deferred", depth: "deep", subject, auto, note: watch.lastDecision });
     await saveTab(tab);
     if (tab.telegramChatId) {
-      await sendTelegram(tab.telegramChatId, `👀 <b>${esc(subject)}</b>: ${esc(why)}.\nToday's cap is nearly used, so the deep check runs tomorrow.`);
+      const head = scan.insiders?.sold ? "🚨" : "👀";
+      await sendTelegram(tab.telegramChatId, `${head} <b>${esc(subject)}</b>: ${esc(why)}\nToday's cap is nearly used, so the deep check runs tomorrow.`);
     }
     return scan;
   }
-  return checkForTab(tab, inputOf(watch), { auto, watch, depth: "deep", decision: `Scan saw ${why}, so Vex bought a deep check.`, triggers });
+  // Compare the deep check's holders with the snapshot from before today's scan, so the move shows up in its report
+  return checkForTab(tab, inputOf(watch), { auto, watch, depth: "deep", decision: `Scan saw ${why}, so Vex bought a deep check.`, triggers, previousInsiders: before });
 }
 
-type CheckOpts = { auto: boolean; watch?: Watch; depth?: Depth; decision?: string; triggers?: string[] };
+type CheckOpts = { auto: boolean; watch?: Watch; depth?: Depth; decision?: string; triggers?: string[]; previousInsiders?: InsiderSnapshot | null };
 
 /**
  * Runs one check for a tab, records it, and returns the report. Used for a
@@ -116,7 +120,8 @@ export async function checkForTab(tab: TabRecord, input: CheckInput, opts: Check
   const depth = opts.depth ?? "deep";
   let report: Report;
   try {
-    report = await runCheck(input, tab.session, depth);
+    const prev = opts.previousInsiders !== undefined ? opts.previousInsiders : opts.watch?.insiders;
+    report = await runCheck(input, tab.session, depth, prev);
   } catch (e) {
     if (e instanceof TabError && opts.watch) {
       // The cap resets on its own; an expired tab does not
@@ -152,12 +157,15 @@ export async function checkForTab(tab: TabRecord, input: CheckInput, opts: Check
   if (w) {
     w.lastCheckedAt = report.at;
     w.paused = undefined;
+    if (report.insiders) w.insiders = report.insiders.snapshot;
     if (opts.decision) w.lastDecision = opts.decision;
     // A scan only feeds the decision. The verdict comes from deep checks
     if (report.depth === "deep") {
       const before = w.last;
       w.last = { score: report.score, verdict: report.verdict, reasons: report.reasons };
       w.lastDeepAt = report.at;
+      // Keep the full report for the detail view, minus the raw sample posts
+      w.lastReport = { ...report, social: report.social ? { ...report.social, sample: report.social.sample.slice(0, 3) } : report.social };
       w.deepPending = undefined;
       if (report.social) w.baseline = report.social;
       const alert = changeWorthAlerting(before, w.last);
@@ -196,6 +204,9 @@ function incidentText(subject: string, before: Watch["last"], r: Report, why: st
     "<b>Why</b>",
     ...r.reasons.slice(0, 3).map((x) => `• ${esc(x)}`),
   ];
+  if (r.insiders?.moves.length) lines.push("", "<b>Insiders</b>", ...r.insiders.moves.map((m) => `• ${esc(m)}`));
+  const loud = (r.pushers ?? []).filter((p) => p.flags.length).slice(0, 3);
+  if (loud.length) lines.push("", "<b>Who's pushing it</b>", ...loud.map((p) => `• @${esc(p.author)}: ${esc(p.flags.join(", "))}`));
   if (triggers?.length) lines.push("", "<b>What made Vex look closer</b>", `Today's scan: ${esc(triggers.join(", "))}`);
   // What this incident cost: today's scan for this subject plus the deep check
   const today = tab.log.filter((l) => l.kind === "check" && l.subject === subject && Date.now() - Date.parse(l.at) < 3_600_000 && l.amount);

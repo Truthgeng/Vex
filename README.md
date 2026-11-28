@@ -20,12 +20,20 @@ Vex pays for its own checks, so it needs money it can spend while the user is aw
 6. If a verdict flips or a score moves 15 points or more, Vex sends a Telegram alert with the reasons.
 7. Every charged check appears on [/proof](https://vex-black.vercel.app/proof) with its transaction, marked as run on schedule or by the user.
 
+## What a check looks at
+
+- **Who's pushing it (X).** The accounts posting about the project, loudest first, with followers, account age and likes, and flags for what's worth a look: brand-new accounts, tiny accounts, big followings with almost no likes, and **serial promoters**, accounts that posted about 3 or more other projects Vex watches in the last 30 days. Vex remembers who pushed what across every watchlist, so this gets sharper as more people use it. Flags are signals, not proof.
+- **Insiders (onchain, Celo, Ethereum, Base).** The deployer and the 10 biggest wallets (pools and lockers left out), read free from the public Blockscout explorer on every run. Vex alerts when the deployer or a top wallet cuts its holding by 30% or more, or by 1% of supply outright, and when a new wallet suddenly holds 2%+. Celo and Ethereum are tested; Base uses the same API but is untested.
+- **Transfers (Celo).** A day of token transfers through buy's Chainstack RPC: how many wallets, how concentrated, how much goes back and forth.
+
+`GET /api/holders?chain=celo&contract=0x...` returns the holder snapshot for any token, free.
+
 ## How Vex decides what to spend
 
 A deep check costs five times a scan, so Vex doesn't buy one every day. The rules are fixed in `lib/server/watcher.ts`, so the same numbers always lead to the same decision:
 
 1. **Deep check straight away** when there is no baseline yet, the watch has no X handle, a scan asked for one yesterday, or a week has passed since the last one.
-2. **Otherwise a scan** (one X search, 0.01 USDC), compared with the last deep check: post volume up 60%+, new or tiny accounts up 15 points, copy-paste posts up 15 points, or the top 3 accounts up 20 points.
+2. **Otherwise a scan** (one X search, 0.01 USDC, plus the free holder read), compared with the last deep check. Insider selling always counts. So do: post volume up 60%+, new or tiny accounts up 15 points, copy-paste posts up 15 points, or the top 3 accounts up 20 points.
 3. **Nothing moved:** stop. **Something moved:** read today's remaining allowance from the user's account on Celo. If a deep check fits, buy it. If not, say so, alert the user, and go deep on the next run.
 
 Each decision is written in plain words to the activity feed, the watch, and the Telegram alert, which reads like an incident report: what changed, what made Vex look closer, what it bought, what it cost, and the transactions.
