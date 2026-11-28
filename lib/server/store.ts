@@ -135,6 +135,15 @@ export async function removeTab(wallet: string) {
 
 export const allWallets = () => setMembers(ALL);
 
+/** Writes and reads back one value, to prove storage works where it runs. */
+export async function storeCheck(): Promise<{ kind: string; ok: boolean; ms: number }> {
+  const t = Date.now();
+  const v = newToken().slice(0, 8);
+  await set("health", v, 3600);
+  const back = await get<string>("health");
+  return { kind: storeKind(), ok: back === v, ms: Date.now() - t };
+}
+
 /** Finds the tab for a request and checks it carries that tab's owner token. */
 export async function ownedTab(wallet: string | null, ownerToken: string | null): Promise<TabRecord | null> {
   if (!wallet || !ownerToken) return null;
