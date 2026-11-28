@@ -103,6 +103,8 @@ export type Watch = {
   insiders?: InsiderSnapshot | null;
   /** The full last deep report, for the detail view */
   lastReport?: Report;
+  /** Score after each deep check, oldest first, last 30 */
+  history?: { at: string; score: number; verdict: Verdict }[];
   addedAt: string;
   lastCheckedAt?: string;
   /** Result of the last deep check, the one the verdict comes from */

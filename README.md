@@ -47,6 +47,17 @@ Each decision is written in plain words to the activity feed, the watch, and the
 - **tab (default):** one capped charge per check from the user's wallet, then the agent pays the services from its own wallet. The cap is enforced onchain on every charge.
 - **direct (`PAY_MODE=direct`, experimental):** the agent pays each service straight from the user's wallet with an ERC-1271 x402 signature (`fetchWithX402`). This needs one more setup call (USDC approved as signature checker). Since Altana SDK 1.2.0 the SDK checks the session's cap before signing, but that check runs in the SDK, not onchain, and its count of signed payments lives in memory. On serverless hosting it starts from zero on each new process, so tab mode stays the default: its charges go through `execute`, where the chain enforces the cap.
 
+## Pages
+
+- `/` the landing page, with live counts from the proof record
+- `/app` the desk: guided setup, then a watchlist and a full dossier per project (findings, score over time, holders, who's pushing it, what Vex spent on it), activity, and wallet and tab
+- `/app?demo=1` a demo desk with sample data, available in live mode too. Demo tabs are never charged, skipped by the daily run, and kept off the proof page
+- `/proof` every charge and cap test, with Celo transactions
+
+## Storage
+
+Upstash Redis if `KV_REST_API_URL` and `KV_REST_API_TOKEN` are set. Otherwise a **private Vercel Blob store** (`BLOB_READ_WRITE_TOKEN`, set automatically when the store is connected), one private JSON file per key, read from origin. Without either, memory, for local runs only.
+
 ## Setup
 
 ```bash

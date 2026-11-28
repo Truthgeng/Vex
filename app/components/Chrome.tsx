@@ -1,33 +1,38 @@
-/** The Vex mark: an eye-shaped lens with a cut, the watcher. */
-export function Logo({ size = 24 }: { size?: number }) {
+/** The Vex mark: a lens with a single flare point, the thing it noticed. */
+export function Logo({ size = 22 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden>
-      <defs>
-        <linearGradient id="vx" x1="0" y1="0" x2="32" y2="32">
-          <stop offset="0" stopColor="#ff6a3d" />
-          <stop offset="1" stopColor="#ffb547" />
-        </linearGradient>
-      </defs>
-      <path d="M2 16C6 8.5 10.8 5.5 16 5.5S26 8.5 30 16c-4 7.5-8.8 10.5-14 10.5S6 23.5 2 16z" stroke="url(#vx)" strokeWidth="2.4" />
-      <circle cx="16" cy="16" r="5" fill="url(#vx)" />
-      <path d="M21 9L11 23" stroke="#07080a" strokeWidth="2.2" strokeLinecap="round" />
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="12" cy="12" r="9.25" stroke="#edeae3" strokeWidth="1.5" />
+      <circle cx="12" cy="12" r="4.25" stroke="#edeae3" strokeWidth="1.5" opacity="0.45" />
+      <circle cx="17.2" cy="7.2" r="2.4" fill="#ff5a36" />
     </svg>
   );
 }
 
-export function Nav({ mock = false }: { mock?: boolean }) {
+export function Nav({ mock = false, app = false }: { mock?: boolean; app?: boolean }) {
   return (
     <nav className="nav">
       <div className="wrap">
-        <a className="logo" href="/"><Logo /> Vex</a>
+        <a className="mark" href="/" aria-label="Vex home"><Logo /> <b>Vex</b></a>
         <div className="nav-links">
-          <a href="/#app">Watch desk</a>
-          <a href="/#how">How it works</a>
-          <a href="/proof">Proof</a>
+          {app ? (
+            <>
+              <a href="/app" className="on">Desk</a>
+              <a href="/proof">Proof</a>
+              <a href="/#how">How it works</a>
+            </>
+          ) : (
+            <>
+              <a href="#catches">What it catches</a>
+              <a href="#how">How it pays</a>
+              <a href="#alert">The alert</a>
+              <a href="/proof">Proof</a>
+            </>
+          )}
         </div>
-        <div className="nav-right">
-          <span className={`pill ${mock ? "" : "live"}`}><i />{mock ? "Demo mode" : "Live on Celo"}</span>
-          <a className="btn btn-primary btn-sm" href="/#app">Open Vex</a>
+        <div className="nav-end">
+          <span className={`status ${mock ? "demo" : ""}`}><i />{mock ? "Demo mode" : "Live on Celo"}</span>
+          {!app && <a className="btn btn-paper btn-sm" href="/app">Open the desk</a>}
         </div>
       </div>
     </nav>
@@ -38,10 +43,13 @@ export function Footer() {
   return (
     <footer>
       <div className="wrap">
-        <span>Vex · built on Celo with Altana agent wallets</span>
+        <span>Vex. Built on Celo with Altana agent wallets.</span>
         <span>
-          <a href="https://github.com/Truthgeng/Vex" target="_blank" rel="noreferrer">GitHub</a> ·{" "}
-          <a href="/agent.json">Agent card</a> · <a href="/proof">Proof</a>
+          <a href="https://github.com/Truthgeng/Vex" target="_blank" rel="noreferrer">GitHub</a>
+          {"  ·  "}
+          <a href="/agent.json">Agent card</a>
+          {"  ·  "}
+          <a href="/proof">Proof</a>
         </span>
       </div>
     </footer>

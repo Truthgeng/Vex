@@ -164,6 +164,7 @@ export async function checkForTab(tab: TabRecord, input: CheckInput, opts: Check
       const before = w.last;
       w.last = { score: report.score, verdict: report.verdict, reasons: report.reasons };
       w.lastDeepAt = report.at;
+      w.history = [...(w.history ?? []), { at: report.at, score: report.score, verdict: report.verdict }].slice(-30);
       // Keep the full report for the detail view, minus the raw sample posts
       w.lastReport = { ...report, social: report.social ? { ...report.social, sample: report.social.sample.slice(0, 3) } : report.social };
       w.deepPending = undefined;
