@@ -1,7 +1,7 @@
 import { Redis } from "@upstash/redis";
 import { createHash, randomBytes } from "node:crypto";
 import type { SerializedSession } from "@altananetwork/sdk";
-import type { LogEntry, TabState, Watch } from "@/lib/types";
+import type { CapTest, LogEntry, TabState, Watch } from "@/lib/types";
 
 /**
  * Everything Vex remembers, per tab. A tab is one user wallet; every tab is
@@ -96,6 +96,19 @@ export async function addProof(p: ProofEntry) {
 export async function proofs(): Promise<ProofEntry[]> {
   if (redis) return (await redis.lrange<ProofEntry>(PROOF, 0, 499)) ?? [];
   return (mem.get(PROOF) as ProofEntry[]) ?? [];
+}
+
+/** Every cap test, refused or not, newest first. Public on the proof page. */
+const CAPS = "captests";
+export async function addCapTest(c: CapTest) {
+  if (redis) {
+    await redis.lpush(CAPS, c);
+    await redis.ltrim(CAPS, 0, 99);
+  } else mem.set(CAPS, [c, ...((mem.get(CAPS) as CapTest[]) ?? [])].slice(0, 100));
+}
+export async function capTests(): Promise<CapTest[]> {
+  if (redis) return (await redis.lrange<CapTest>(CAPS, 0, 99)) ?? [];
+  return (mem.get(CAPS) as CapTest[]) ?? [];
 }
 
 /** What the page is allowed to see about its own tab. */

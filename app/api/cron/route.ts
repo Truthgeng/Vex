@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { allWallets, getTab } from "@/lib/server/store";
-import { checkForTab, isDue } from "@/lib/server/watcher";
+import { isDue, runWatch } from "@/lib/server/watcher";
 import { isMock } from "@/lib/server/scout";
 
 export const dynamic = "force-dynamic";
@@ -8,8 +8,9 @@ export const maxDuration = 300;
 
 /**
  * The daily run, called by Vercel Cron (see vercel.json). Goes through every
- * live tab and checks each watch that is due, paying from that tab. No one
- * clicks anything: this is the part the tab exists for.
+ * live tab and runs each watch that is due, paying from that tab: a scan, and
+ * a deep check only when the scan gives a reason. No one clicks anything: this
+ * is the part the tab exists for.
  */
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
@@ -33,7 +34,8 @@ export async function GET(req: Request) {
       if (Date.now() - started > 250_000) return NextResponse.json({ ...done, stoppedEarly: true });
       if (!isDue(watch)) continue;
       try {
-        await checkForTab(tab, { handle: watch.handle, contract: watch.contract as `0x${string}` | undefined }, { auto: true, watch });
+        // Vex decides per watch: a cheap scan, or a deep check when something moved
+        await runWatch(tab, watch, true);
         done.checks++;
       } catch (e) {
         done.failed++;

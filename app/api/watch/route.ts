@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { publicState, saveTab } from "@/lib/server/store";
 import { botUsername } from "@/lib/server/telegram";
-import { checkForTab, MAX_WATCHES, newWatch } from "@/lib/server/watcher";
+import { checkForTab, MAX_WATCHES, newWatch, runWatch } from "@/lib/server/watcher";
 import { caught, fail, readInput, tabFrom } from "@/lib/server/http";
 
 export const dynamic = "force-dynamic";
@@ -20,22 +20,30 @@ export async function POST(req: Request) {
     tab.watches.unshift(watch);
     await saveTab(tab);
     // The first check is the baseline every later check is compared to
-    const report = await checkForTab(tab, input, { auto: false, watch }).catch(() => null);
+    const report = await checkForTab(tab, input, { auto: false, watch, depth: "deep", decision: "First deep check, to set the baseline." }).catch(() => null);
     return NextResponse.json({ tab: publicState(tab, botUsername()), report });
   } catch (e) {
     return caught(e);
   }
 }
 
-/** Checks one watch now instead of waiting for the daily run. Body: { id } */
+/**
+ * Runs one watch now instead of waiting for the daily run. Body: { id, mode }.
+ * mode "decide" runs exactly what the daily run does (scan, then a deep check
+ * only if the scan gives a reason). mode "deep" buys a deep check outright.
+ */
 export async function PATCH(req: Request) {
   try {
     const tab = await tabFrom(req);
     if (!tab) return fail("Open a tab first.", 401);
-    const { id } = (await req.json()) as { id?: string };
+    const { id, mode } = (await req.json()) as { id?: string; mode?: "decide" | "deep" };
     const watch = tab.watches.find((w) => w.id === id);
     if (!watch) return fail("That watch is gone.", 404);
-    const report = await checkForTab(tab, { handle: watch.handle, contract: watch.contract as `0x${string}` | undefined }, { auto: false, watch });
+    if (mode === "decide") {
+      const report = await runWatch(tab, watch, false);
+      return NextResponse.json({ tab: publicState(tab, botUsername()), report });
+    }
+    const report = await checkForTab(tab, { handle: watch.handle, contract: watch.contract as `0x${string}` | undefined }, { auto: false, watch, depth: "deep", decision: "You asked for a deep check." });
     return NextResponse.json({ tab: publicState(tab, botUsername()), report });
   } catch (e) {
     return caught(e);

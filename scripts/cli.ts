@@ -4,6 +4,9 @@ import type { Hex } from "viem";
 import { CELO_USDC, CELO_CHAIN_ID, TAB_CALLS, usdc, showUsdc } from "../lib/config";
 import { altana, sessionSigner } from "../lib/server/agent";
 import { runCheck } from "../lib/server/scout";
+import { runWatch, newWatch } from "../lib/server/watcher";
+import { runCapTest } from "../lib/server/captest";
+import { getTab, saveTab, newToken, hash, type TabRecord } from "../lib/server/store";
 
 // Test the whole flow from the terminal, as a user, before the web page is ready.
 // TEST_USER_KEY is a test user's admin key (yours). It owns the Altana wallet;
@@ -12,6 +15,8 @@ import { runCheck } from "../lib/server/scout";
 //   npm run cli -- wallet                 show the wallet address and balances
 //   npm run cli -- open-tab 1 7           let the agent spend up to 1 USDC a day for 7 days
 //   npm run cli -- check celo 0x...       run a check, paid from the tab
+//   npm run cli -- decide celo            what the daily run does: scan, deep only if something moved
+//   npm run cli -- cap-test               ask Altana to overspend the tab by 0.01 USDC (should be refused)
 //   npm run cli -- close-tab              revoke the tab
 
 const TAB_FILE = ".tab.json";
@@ -91,6 +96,29 @@ async function main() {
     return;
   }
 
+  if (cmd === "decide" || cmd === "cap-test") {
+    if (!existsSync(TAB_FILE)) throw new Error("Open a tab first: npm run cli -- open-tab 1 7");
+    const stored = JSON.parse(readFileSync(TAB_FILE, "utf8")) as SerializedSession;
+    // A throwaway tab record for the terminal: same session, same rules as the site
+    const tab: TabRecord = (await getTab(stored.walletAddress)) ?? {
+      wallet: stored.walletAddress.toLowerCase(), session: stored, ownerHash: hash(newToken()), createdAt: new Date().toISOString(),
+      linkCode: newToken().slice(0, 16), watches: [], log: [],
+    };
+    if (cmd === "cap-test") {
+      console.log(JSON.stringify(await runCapTest(tab), null, 2));
+      return;
+    }
+    const handle = a?.replace(/^@/, "");
+    if (!handle) throw new Error("Usage: npm run cli -- decide <handle>");
+    let watch = tab.watches.find((w) => w.handle === handle);
+    if (!watch) { watch = newWatch({ handle }); tab.watches.unshift(watch); await saveTab(tab); }
+    const r = await runWatch(tab, watch, false);
+    console.log(watch.lastDecision);
+    if (r) console.log(`${r.depth}: ${r.verdict} (${r.score}/100), charged ${r.charge ? showUsdc(r.charge.amount) : 0} USDC ${r.charge?.txHash ? `https://celoscan.io/tx/${r.charge.txHash}` : ""}`);
+    console.log("Run it again to see the scan compared with the baseline.");
+    return;
+  }
+
   if (cmd === "close-tab") {
     if (!existsSync(TAB_FILE)) throw new Error("No tab open.");
     const stored = JSON.parse(readFileSync(TAB_FILE, "utf8")) as SerializedSession;
@@ -101,7 +129,7 @@ async function main() {
     return;
   }
 
-  console.log("Commands: wallet | open-tab <daily USDC> <days> | check <handle> <contract> | close-tab");
+  console.log("Commands: wallet | open-tab <daily USDC> <days> | check <handle> <contract> | decide <handle> | cap-test | close-tab");
 }
 
 main().catch((e) => {

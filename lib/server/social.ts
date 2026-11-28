@@ -7,15 +7,17 @@ const MAX_X = () => process.env.MAX_X_SEARCH || "0.02";
 
 const DAY = 86_400_000;
 
-/** Posts from the last 7 days that tag the handle, not posts by the project itself. */
-export async function postsTagging(handle: string, pay: Payer): Promise<Post[]> {
+/**
+ * Posts from the last 7 days that tag the handle, not posts by the project
+ * itself. A scan buys one search (latest); a deep check buys latest and top.
+ */
+export async function postsTagging(handle: string, pay: Payer, deep = true): Promise<Post[]> {
   const query = `@${handle} -from:${handle} within_time:7d`;
-  const [latest, top] = await Promise.all([
-    pay("x-search", X_SEARCH, { query, type: "latest" }, MAX_X()),
-    pay("x-search", X_SEARCH, { query, type: "top" }, MAX_X()),
-  ]);
+  const pages = await Promise.all(
+    (deep ? ["latest", "top"] : ["latest"]).map((type) => pay("x-search", X_SEARCH, { query, type }, MAX_X())),
+  );
   const byId = new Map<string, Post>();
-  for (const p of [...readPosts(latest), ...readPosts(top)]) byId.set(p.id, p);
+  for (const p of pages.flatMap(readPosts)) byId.set(p.id, p);
   const h = handle.toLowerCase();
   // X search matches loosely, so keep only posts that really mention the handle
   return [...byId.values()].filter((p) => p.author !== h && p.text.toLowerCase().includes(`@${h}`));

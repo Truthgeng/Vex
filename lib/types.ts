@@ -58,20 +58,31 @@ export type ChainSignals = {
 };
 
 /** A project Vex keeps an eye on for one tab. */
+export type Depth = "scan" | "deep";
+
 export type Watch = {
   id: string;
   handle?: string;
   contract?: string;
   addedAt: string;
   lastCheckedAt?: string;
+  /** Result of the last deep check, the one the verdict comes from */
   last?: { score: number; verdict: Verdict; reasons: string[] };
+  lastDeepAt?: string;
+  /** X signals from the last deep check: what each daily scan is compared to */
+  baseline?: SocialSignals | null;
+  /** Why Vex did what it did on its last run, in plain words */
+  lastDecision?: string;
+  /** A scan saw a change but the tab had no room left today: go deep next run */
+  deepPending?: string;
   /** Set when automatic checks stopped, with the reason in plain words */
   paused?: string;
 };
 
 export type LogEntry = {
   at: string;
-  kind: "check" | "alert" | "paused" | "refund";
+  kind: "check" | "alert" | "paused" | "refund" | "deferred";
+  depth?: Depth;
   subject: string;
   score?: number;
   verdict?: Verdict;
@@ -102,5 +113,22 @@ export type Report = {
   charge?: TabCharge;
   paidCalls: PaidCall[];
   mode: "mock" | "tab" | "direct";
+  depth: Depth;
   at: string;
+};
+
+/** Read from the chain: what the tab's cap allows and what it has used this period. */
+export type Allowance = { limit: string; spent: string; remaining: string; periodStart: number; source: "chain" | "demo" };
+
+/** One attempt to charge past the cap, kept as proof that Altana refuses it. */
+export type CapTest = {
+  at: string;
+  wallet: string;
+  attempted: string;
+  limit: string;
+  spentBefore: string;
+  refused: boolean;
+  reason: string;
+  tx?: string;
+  demo: boolean;
 };

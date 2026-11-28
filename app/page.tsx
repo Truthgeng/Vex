@@ -1,7 +1,7 @@
 import HeroCanvas from "./components/HeroCanvas";
 import VexApp from "./components/VexApp";
 import { Logo, Nav, Footer } from "./components/Chrome";
-import { checkPrice, isMock } from "@/lib/server/scout";
+import { checkPrice, isMock, scanPrice } from "@/lib/server/scout";
 import { showUsdc } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
@@ -28,8 +28,8 @@ export default function Home() {
               <a className="btn btn-ghost" href="/proof">See the onchain proof</a>
             </div>
             <div className="facts">
-              <div><b>Daily</b>re-checks on its own</div>
-              <div><b>{showUsdc(checkPrice())} USDC</b>per check</div>
+              <div><b>{showUsdc(scanPrice())} USDC</b>a daily scan</div>
+              <div><b>{showUsdc(checkPrice())} USDC</b>a deep check, only when needed</div>
               <div><b>Capped</b>by Altana, onchain</div>
             </div>
           </div>
@@ -70,8 +70,8 @@ export default function Home() {
               <div className="glyph">
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#ffb547" strokeWidth="1.8" strokeLinecap="round"><path d="M14.5 6.5A6 6 0 1 0 15 10M15 3v3.5h-3.5" /></svg>
               </div>
-              <h3>Vex checks every day</h3>
-              <p>Who is posting about each project on X, how many of those accounts look fake, and whether its token moves between real wallets.</p>
+              <h3>Vex decides what to spend</h3>
+              <p>A cheap scan every day. When the posts, accounts or wallets around a project shift, Vex buys a deep check on its own, if your cap has room.</p>
             </div>
             <div className="card step">
               <div className="glyph">

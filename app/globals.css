@@ -154,6 +154,7 @@ section[id] { scroll-margin-top: 84px; }
 .score b { position: relative; z-index: 1; }
 .watch .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .watch .meta { font-size: 12.5px; color: var(--dim); display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 3px; }
+.watch .decision { font-size: 12.5px; color: var(--faint); margin-top: 4px; }
 .watch .why { grid-column: 2 / -1; font-size: 13px; color: var(--dim); margin: -4px 0 0; padding-left: 16px; }
 .watch .acts { display: flex; gap: 6px; }
 .empty { border: 1px dashed var(--line-hi); border-radius: 14px; padding: 26px; text-align: center; color: var(--dim); }
@@ -228,7 +229,8 @@ footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wr
   .hero-ctas .btn { flex: 1; }
   .watch { grid-template-columns: 40px 1fr; }
   .watch .acts { grid-column: 1 / -1; }
-  .watch .why { grid-column: 1 / -1; padding-left: 0; }
+  .watch .decision { font-size: 12.5px; color: var(--faint); margin-top: 4px; }
+.watch .why { grid-column: 1 / -1; padding-left: 0; }
   .score { width: 40px; height: 40px; }
   .hero-legend { display: none; }
   .table .hide-sm { display: none; }

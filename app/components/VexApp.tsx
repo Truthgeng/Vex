@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient, CELO, serializeSession, type Signer } from "@altananetwork/sdk";
 import { encodeFunctionData, erc20Abi, isAddress } from "viem";
 import { CELO_USDC, CELO_CHAIN_ID, TAB_CALLS, usdc, showUsdc } from "@/lib/config";
-import type { LogEntry, Report, TabState, Verdict, Watch } from "@/lib/types";
+import type { Allowance, CapTest, LogEntry, Report, TabState, Verdict, Watch } from "@/lib/types";
 
 type AgentInfo = {
   sessionPublicKey: `0x${string}`;
@@ -54,6 +54,8 @@ export default function VexApp() {
   const [checkIn, setCheckIn] = useState({ handle: "", contract: "" });
   const [wd, setWd] = useState<{ open: boolean; to: string; amount: string }>({ open: false, to: "", amount: "" });
   const [open, setOpen] = useState<string | null>(null);
+  const [room, setRoom] = useState<Allowance | null>(null);
+  const [capTest, setCapTest] = useState<CapTest | null>(null);
 
   const api = useCallback(
     async (path: string, init: RequestInit = {}) => {
@@ -88,6 +90,12 @@ export default function VexApp() {
       });
   }, [wallet, token, api]);
 
+  // What the tab may still spend today, read from Celo (live tabs only)
+  useEffect(() => {
+    if (!tab || demo || agent?.mock) { setRoom(null); return; }
+    api("/api/tab/allowance").then((a) => setRoom(a.source === "chain" ? a : null)).catch(() => setRoom(null));
+  }, [tab, demo, agent, api, busy]);
+
   // Wallet balance
   useEffect(() => {
     if (!wallet || demo) return;
@@ -115,9 +123,11 @@ export default function VexApp() {
   const capUnits = cap ? BigInt(cap.limit) : 0n;
   // Altana's daily cap resets at 00:00 UTC, so count from there, not a rolling 24h
   const dayStart = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate());
-  const spentUnits = (tab?.log ?? [])
+  const loggedSpent = (tab?.log ?? [])
     .filter((l) => l.kind === "check" && l.amount && Date.parse(l.at) >= dayStart)
     .reduce((a, l) => a + BigInt(l.amount!), 0n);
+  // Prefer the chain's own numbers when we have them
+  const spentUnits = room ? BigInt(room.spent) : loggedSpent;
 
   // ---------- actions ----------
 
@@ -204,11 +214,16 @@ export default function VexApp() {
       setTab(body.tab); setWatchIn({ handle: "", contract: "" });
     }, "Watching");
 
-  const checkNow = (w: Watch) =>
-    run("Checking", async () => {
-      const body = await api("/api/watch", { method: "PATCH", body: JSON.stringify({ id: w.id }) });
+  const runWatchNow = (w: Watch, mode: "decide" | "deep") =>
+    run(mode === "decide" ? "Vex is deciding" : "Buying a deep check", async () => {
+      const body = await api("/api/watch", { method: "PATCH", body: JSON.stringify({ id: w.id, mode }) });
       setTab(body.tab); setOpen(w.id);
-    }, "Checked");
+    }, "Done");
+
+  const testCap = () =>
+    run("Asking Altana to overspend", async () => {
+      setCapTest(await api("/api/tab/cap-test", { method: "POST" }));
+    });
 
   const removeWatch = (w: Watch) =>
     run("Removing", async () => {
@@ -280,12 +295,23 @@ export default function VexApp() {
                 <CapRing spent={spentUnits} cap={capUnits} />
                 <div>
                   <div><b>{showUsdc(capUnits)} USDC</b> <span className="muted">a day</span></div>
-                  <div className="note">USDC transfers only</div>
+                  <div className="note">{room ? `${showUsdc(room.remaining)} left today, read from Celo` : "USDC transfers only"}</div>
                   <div className="note">Ends {new Date(tab!.session.expiry * 1000).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</div>
                 </div>
               </div>
               <div className="divider" />
-              <button className="btn btn-ghost btn-sm" onClick={closeTab} disabled={!!busy || locked}>Close tab</button>
+              <div className="row">
+                <button className="btn btn-ghost btn-sm" onClick={testCap} disabled={!!busy}>Test the cap</button>
+                <button className="btn btn-ghost btn-sm" onClick={closeTab} disabled={!!busy || locked}>Close tab</button>
+              </div>
+              {capTest && (
+                <div className="bubble" role="status">
+                  <div className="from">Cap test {capTest.demo && <span className="sample">demo</span>}</div>
+                  Vex asked to move <b>{showUsdc(capTest.attempted)} USDC</b>, 0.01 more than the tab had left.{" "}
+                  {capTest.refused ? <b style={{ color: "var(--real)" }}>Refused.</b> : <b style={{ color: "var(--farmed)" }}>It went through.</b>}
+                  <div className="muted">{capTest.reason} {txLink(capTest.tx)}</div>
+                </div>
+              )}
             </>
           ) : (
             <>
@@ -323,7 +349,7 @@ export default function VexApp() {
         {/* Watchlist */}
         <div className="card span-8 c-watch">
           <h3>Watchlist</h3>
-          <p className="lede">Vex re-checks these every day on its own and pays from your tab.</p>
+          <p className="lede">Every day Vex scans each one for under a cent, and only buys a deep check when something moved.</p>
           <div className="row" style={{ marginBottom: 14 }}>
             <label className="field"><span>X handle</span><input className="input" value={watchIn.handle} onChange={(e) => setWatchIn({ ...watchIn, handle: e.target.value })} placeholder="@project" /></label>
             <label className="field"><span>Celo token (optional)</span><input className="input mono" value={watchIn.contract} onChange={(e) => setWatchIn({ ...watchIn, contract: e.target.value })} placeholder="0x…" /></label>
@@ -343,9 +369,11 @@ export default function VexApp() {
                     {w.paused && <span style={{ color: "var(--mixed)" }}>{w.paused}</span>}
                     {w.last?.reasons.length ? <button className="linkish" onClick={() => setOpen(open === w.id ? null : w.id)}>{open === w.id ? "hide why" : "why"}</button> : null}
                   </div>
+                  {w.lastDecision && <div className="decision">{w.lastDecision}</div>}
                 </div>
                 <div className="acts">
-                  <button className="btn btn-ghost btn-sm" onClick={() => checkNow(w)} disabled={!!busy}>Check now</button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => runWatchNow(w, "decide")} disabled={!!busy} title="What the daily run does: a scan, then a deep check only if something moved">Let Vex decide</button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => runWatchNow(w, "deep")} disabled={!!busy}>Deep check</button>
                   <button className="btn btn-ghost btn-sm" onClick={() => removeWatch(w)} disabled={!!busy} aria-label="Stop watching">✕</button>
                 </div>
                 {open === w.id && w.last && <ul className="why reasons">{w.last.reasons.map((r) => <li key={r}>{r}</li>)}</ul>}
@@ -405,7 +433,7 @@ function Feed({ l, demo }: { l: LogEntry; demo: boolean }) {
       <span className="k" aria-hidden><FeedIcon kind={l.kind} auto={l.auto} /></span>
       <div style={{ minWidth: 0 }}>
         <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {l.kind === "alert" ? "Alert sent: " : l.kind === "paused" ? "Paused: " : ""}{l.subject}
+          {l.kind === "alert" ? "Alert sent: " : l.kind === "paused" ? "Paused: " : l.kind === "deferred" ? "Deep check waits: " : l.depth === "scan" ? "Scan: " : l.depth === "deep" ? "Deep check: " : ""}{l.subject}
           {l.verdict && l.kind === "check" && <span className={`verdict ${vClass(l.verdict)}`} style={{ marginLeft: 8 }}>{l.score}</span>}
         </div>
         <div className="faint" style={{ fontSize: 12 }}>
@@ -421,6 +449,7 @@ function Feed({ l, demo }: { l: LogEntry; demo: boolean }) {
 function FeedIcon({ kind, auto }: { kind: LogEntry["kind"]; auto: boolean }) {
   const p = { width: 12, height: 12, viewBox: "0 0 12 12", fill: "none", strokeWidth: 1.6, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
   if (kind === "alert") return <svg {...p} stroke="var(--amber)"><path d="M3 8.5h6L8 7V5a2 2 0 1 0-4 0v2L3 8.5zM5 10h2" /></svg>;
+  if (kind === "deferred") return <svg {...p} stroke="var(--mixed)"><path d="M6 3v3l2 1.5" /><circle cx="6" cy="6" r="4" /></svg>;
   if (kind === "paused") return <svg {...p} stroke="var(--mixed)"><path d="M4.5 3v6M7.5 3v6" /></svg>;
   if (kind === "refund") return <svg {...p} stroke="var(--dim)"><path d="M4 3L2 5l2 2M2 5h5a3 3 0 0 1 0 6H5" /></svg>;
   if (auto) return <svg {...p} stroke="var(--amber)"><path d="M9.5 4.5A4 4 0 1 0 10 7M10 2v2.5H7.5" /></svg>;

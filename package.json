@@ -11,7 +11,8 @@
     "keys": "tsx --env-file-if-exists=.env.local scripts/new-keys.ts",
     "register": "tsx --env-file-if-exists=.env.local scripts/register-agent.ts",
     "cli": "tsx --env-file-if-exists=.env.local scripts/cli.ts",
-    "telegram": "tsx --env-file-if-exists=.env.local scripts/telegram.ts"
+    "telegram": "tsx --env-file-if-exists=.env.local scripts/telegram.ts",
+    "test": "tsx --test test/*.test.ts"
   },
   "dependencies": {
     "@altananetwork/sdk": "^1.2.0",
