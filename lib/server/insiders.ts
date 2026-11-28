@@ -5,14 +5,20 @@ import type { Chain, InsiderSignals, InsiderSnapshot, Holder } from "@/lib/types
  *
  * Reads the public Blockscout explorer API (free, no key): the contract's
  * deployer, its top holders, and which of them are contracts (pools, lockers,
- * bridges). Celo and Ethereum are verified to work; Base runs the same API
- * but was not reachable when this was written, so treat it as untested.
+ * bridges). Celo and Ethereum are verified to work on live data. Base's
+ * explorer refused requests (403) when tested, so it is not offered.
  */
 const EXPLORER: Record<Chain, string> = {
   celo: "https://celo.blockscout.com/api/v2",
   ethereum: "https://eth.blockscout.com/api/v2",
-  base: "https://base.blockscout.com/api/v2",
 };
+
+/**
+ * Exchange wallets look like ordinary wallets onchain, but they hold tokens
+ * for their customers. Moving them would set off false insider alerts, so a
+ * wallet the explorer labels as an exchange is grouped with the contracts.
+ */
+const EXCHANGE = /binance|okx|bybit|coinbase|kraken|bitget|kucoin|gate\.io|htx|huobi|bithumb|btcturk|gemini|mexc|upbit|bitfinex|crypto\.com|exchange|hot wallet|cold wallet|deposit/i;
 
 const BURN = new Set(["0x0000000000000000000000000000000000000000", "0x000000000000000000000000000000000000dead"]);
 const TOP = 10;
@@ -59,7 +65,8 @@ export async function insiderSnapshot(chain: Chain, contract: string): Promise<I
     }
   }
 
-  const wallets = rows.filter((r) => !r.isContract).slice(0, TOP);
+  const pooled = (r: Holder) => r.isContract || (r.label ? EXCHANGE.test(r.label) : false);
+  const wallets = rows.filter((r) => !pooled(r)).slice(0, TOP);
   return {
     chain,
     contract: contract.toLowerCase(),
@@ -67,7 +74,7 @@ export async function insiderSnapshot(chain: Chain, contract: string): Promise<I
     holdersCount: Number(info.token.holders_count || 0),
     deployer,
     top: wallets,
-    contracts: rows.filter((r) => r.isContract).slice(0, 5),
+    contracts: rows.filter(pooled).slice(0, 5),
     topTenShare: Math.round(wallets.reduce((a, w) => a + w.share, 0) * 10_000) / 10_000,
     at: new Date().toISOString(),
   };

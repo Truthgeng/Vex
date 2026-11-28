@@ -49,3 +49,12 @@ test("serial promoters are flagged across projects", async () => {
   assert.ok(ring.flags.some((f) => f.includes("days old")));
   assert.equal(list.find((x) => x.author === "loner")!.alsoPushed.length, 0);
 });
+
+test("exchange wallets are never treated as insiders", async () => {
+  // The grouping happens in insiderSnapshot; here we check the rule it uses on labels
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../lib/server/insiders.ts", import.meta.url), "utf8");
+  const rule = new RegExp(src.match(/const EXCHANGE = \/(.+)\/i;/)![1], "i");
+  for (const label of ["Binance: Hot Wallet 20", "OKX: Cold Wallet", "Bybit: Hot Wallet 10", "Exchange", "Gemini: Deposit Address"]) assert.ok(rule.test(label), label);
+  for (const label of ["Justin Sun 4", "Locked Gold Proxy"]) assert.ok(!rule.test(label), label);
+});

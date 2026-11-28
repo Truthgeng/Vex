@@ -25,6 +25,6 @@ export function readInput(body: { handle?: string; contract?: string; chain?: st
   if (!handle && !contract) throw new TabError("Give an X handle, a Celo token contract, or both.");
   if (handle && !HANDLE.test(handle)) throw new TabError("That X handle doesn't look right.");
   if (contract && !CONTRACT.test(contract)) throw new TabError("That contract address doesn't look right.");
-  const chain = body.chain === "ethereum" || body.chain === "base" ? body.chain : "celo";
+  const chain = body.chain === "ethereum" ? "ethereum" : "celo";
   return { handle, contract: contract as `0x${string}` | undefined, chain: contract ? chain : undefined } as const;
 }

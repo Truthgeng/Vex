@@ -490,7 +490,6 @@ function ChainPick({ value, onChange }: { value: Chain; onChange: (c: Chain) => 
       <select className="input" value={value} onChange={(e) => onChange(e.target.value as Chain)}>
         <option value="celo">Celo</option>
         <option value="ethereum">Ethereum</option>
-        <option value="base">Base</option>
       </select>
     </label>
   );
@@ -511,7 +510,7 @@ const pct1 = (n: number) => `${Math.round(n * 1000) / 10}%`;
 
 function Holders({ i }: { i: InsiderSignals }) {
   const s = i.snapshot;
-  const explorer = s.chain === "celo" ? "https://celoscan.io/address/" : s.chain === "base" ? "https://basescan.org/address/" : "https://etherscan.io/address/";
+  const explorer = s.chain === "celo" ? "https://celoscan.io/address/" : "https://etherscan.io/address/";
   return (
     <div className="detail">
       <h4>Holders <span className="faint">· {s.symbol} on {s.chain}</span></h4>

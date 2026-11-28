@@ -1,11 +1,11 @@
-export type Chain = "celo" | "ethereum" | "base";
+export type Chain = "celo" | "ethereum";
 
 export type CheckInput = {
   /** X handle without the @ */
   handle?: string;
   /** Token contract */
   contract?: `0x${string}`;
-  /** Chain the token lives on. Transfer analysis is Celo only; holder tracking covers all three */
+  /** Chain the token lives on. Transfer analysis is Celo only; holder tracking covers both */
   chain?: Chain;
 };
 
@@ -31,7 +31,7 @@ export type InsiderSnapshot = {
   deployer?: Holder;
   /** The 10 biggest wallets that are not contracts */
   top: Holder[];
-  /** The biggest contract holders: pools, lockers, bridges */
+  /** The biggest pooled holders: contracts (pools, lockers, bridges) and labelled exchange wallets */
   contracts: Holder[];
   topTenShare: number;
   at: string;

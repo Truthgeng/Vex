@@ -23,7 +23,7 @@ Vex pays for its own checks, so it needs money it can spend while the user is aw
 ## What a check looks at
 
 - **Who's pushing it (X).** The accounts posting about the project, loudest first, with followers, account age and likes, and flags for what's worth a look: brand-new accounts, tiny accounts, big followings with almost no likes, and **serial promoters**, accounts that posted about 3 or more other projects Vex watches in the last 30 days. Vex remembers who pushed what across every watchlist, so this gets sharper as more people use it. Flags are signals, not proof.
-- **Insiders (onchain, Celo, Ethereum, Base).** The deployer and the 10 biggest wallets (pools and lockers left out), read free from the public Blockscout explorer on every run. Vex alerts when the deployer or a top wallet cuts its holding by 30% or more, or by 1% of supply outright, and when a new wallet suddenly holds 2%+. Celo and Ethereum are tested; Base uses the same API but is untested.
+- **Insiders (onchain, Celo and Ethereum).** The deployer and the 10 biggest wallets, read free from the public Blockscout explorer on every run. Contracts (pools, lockers, bridges) and wallets the explorer labels as exchanges are left out, since they hold tokens for everyone. Vex alerts when the deployer or a top wallet cuts its holding by 30% or more, or by 1% of supply outright, and when a new wallet suddenly holds 2%+. Celo and Ethereum are tested on live data. Base's explorer refused requests (403) when tested, so Base is not offered.
 - **Transfers (Celo).** A day of token transfers through buy's Chainstack RPC: how many wallets, how concentrated, how much goes back and forth.
 
 `GET /api/holders?chain=celo&contract=0x...` returns the holder snapshot for any token, free.

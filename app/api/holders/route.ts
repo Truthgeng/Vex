@@ -15,7 +15,7 @@ export async function GET(req: Request) {
   const contract = url.searchParams.get("contract") ?? "";
   const chain = url.searchParams.get("chain") ?? "celo";
   if (!CONTRACT.test(contract)) return NextResponse.json({ error: "Give a token contract address." }, { status: 400 });
-  if (chain !== "celo" && chain !== "ethereum" && chain !== "base") return NextResponse.json({ error: "Chain must be celo, ethereum or base." }, { status: 400 });
+  if (chain !== "celo" && chain !== "ethereum") return NextResponse.json({ error: "Chain must be celo or ethereum." }, { status: 400 });
   try {
     return NextResponse.json(await insiderSnapshot(chain, contract), { headers: { "cache-control": "s-maxage=300" } });
   } catch (e) {
