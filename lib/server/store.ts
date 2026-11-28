@@ -202,3 +202,8 @@ export function publicState(t: TabRecord, botUsername?: string): TabState {
       : { linked: false, link: botUsername ? `https://t.me/${botUsername}?start=${t.linkCode}` : undefined },
   };
 }
+
+/** The agent's ERC-8004 identity, saved once it is minted. */
+export type Identity = { agentId: string; tx: string; at: string; uri: string };
+export const getIdentity = () => get<Identity>("identity");
+export const saveIdentity = (i: Identity) => set("identity", i);

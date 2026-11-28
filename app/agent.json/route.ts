@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getIdentity } from "@/lib/server/store";
 
 export const dynamic = "force-dynamic";
 
@@ -9,16 +10,19 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: Request) {
   const origin = process.env.PUBLIC_URL || new URL(req.url).origin;
-  const agentId = process.env.AGENT_ID;
+  const saved = await getIdentity().catch(() => null);
+  const agentId = process.env.AGENT_ID || saved?.agentId;
   return NextResponse.json({
     type: "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
     name: "Vex",
     description:
-      "Checks if an early crypto project's traction is real or farmed. Users give it a capped Altana tab on Celo instead of their keys: USDC only, a daily cap, an expiry, all enforced onchain.",
+      "Watches the crypto projects a KOL promotes. A cheap daily scan, and a deep check only when something moves: insiders selling, serial promoters, bot-driven hype. Alerts on Telegram. Pays for its own checks from a capped Altana tab on the user's passkey wallet on Celo, never their keys.",
     image: `${origin}/icon.svg`,
     services: [
       { name: "web", endpoint: origin },
       { name: "check", endpoint: `${origin}/api/check` },
+      { name: "watch", endpoint: `${origin}/api/watch` },
+      { name: "telegram", endpoint: "https://t.me/vexalatbot" },
     ],
     x402Support: false,
     active: true,
